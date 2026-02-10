@@ -1,0 +1,66 @@
+version: '3.9'
+
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:cuda
+    container_name: open-webui
+    restart: unless-stopped
+
+    ports:
+      - '3322:8080'
+
+    volumes:
+      - open-webui:/app/backend/data
+
+    env_file:
+      - .env
+
+    environment:
+      ENV: prod
+      PORT: 8080
+
+      # Enable CUDA pipeline
+      USE_CUDA_DOCKER: 'true'
+      USE_CUDA_DOCKER_VER: cu128
+
+      # General
+      USE_OLLAMA_DOCKER: 'false'
+      USE_SLIM_DOCKER: 'false'
+      DOCKER: 'true'
+      DO_NOT_TRACK: 'true'
+      ANONYMIZED_TELEMETRY: 'false'
+      SCARF_NO_ANALYTICS: 'true'
+
+      # Model dirs
+      WHISPER_MODEL: base
+      WHISPER_MODEL_DIR: /app/backend/data/cache/whisper/models
+      RAG_EMBEDDING_MODEL: sentence-transformers/all-MiniLM-L6-v2
+      TIKTOKEN_ENCODING_NAME: cl100k_base
+      TIKTOKEN_CACHE_DIR: /app/backend/data/cache/tiktoken
+      HF_HOME: /app/backend/data/cache/embedding/models
+      SENTENCE_TRANSFORMERS_HOME: /app/backend/data/cache/embedding/models
+
+      # Embedding model
+      USE_EMBEDDING_MODEL_DOCKER: sentence-transformers/all-MiniLM-L6-v2
+
+      # Optionally override (leave blank if not used)
+      OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY}
+      OLLAMA_BASE_URL: '/ollama'
+      RAG_RERANKING_MODEL: ''
+      USE_RERANKING_MODEL_DOCKER: ''
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+    # Allow container to see the host
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+
+volumes:
+  open-webui:
+    external: true
