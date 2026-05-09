@@ -4,38 +4,49 @@ services:
   postgres:
     image: postgres:15
     container_name: n8n_postgres
+    profiles:
+      - local-db
+    # Forces this specific Postgres container to listen on a non-standard port internally
+    command: -p ${LOCAL_POSTGRES_PORT:-5435}
+    # Exposes that non-standard port to your host machine for external access/debugging
+    ports:
+      - "${LOCAL_POSTGRES_PORT:-5435}:${LOCAL_POSTGRES_PORT:-5435}"
     env_file:
       - .env
     volumes:
       - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      # Healthcheck must be updated to check the custom port
+      test: ["CMD-SHELL", "pg_isready -h localhost -p ${LOCAL_POSTGRES_PORT:-5435} -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
   n8n:
     image: n8nio/n8n:latest
     container_name: n8n
     ports:
-      - '5678:5678'
+      - "${N8N_PORT:-5678}:5678"
     env_file:
       - .env
     environment:
       - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=postgres
-      - DB_POSTGRESDB_PORT=5435
+      - DB_POSTGRESDB_HOST=${DB_POSTGRESDB_HOST}
+      - DB_POSTGRESDB_PORT=${DB_POSTGRESDB_PORT:-5435}
       - DB_POSTGRESDB_DATABASE=${DB_POSTGRESDB_DATABASE}
       - DB_POSTGRESDB_USER=${DB_POSTGRESDB_USER}
       - DB_POSTGRESDB_PASSWORD=${DB_POSTGRESDB_PASSWORD}
-      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_ACTIVE=${N8N_BASIC_AUTH_ACTIVE:-true}
       - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
       - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
-      - N8N_HOST=localhost
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=http
-      - WEBHOOK_URL=http://localhost:5678/
-      - GENERIC_TIMEZONE=UTC
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=${N8N_PORT:-5678}
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - WEBHOOK_URL=${WEBHOOK_URL:-http://localhost:5678/}
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE:-UTC}
     volumes:
       - n8n_data:/home/node/.n8n
-    depends_on:
-      - postgres
     restart: unless-stopped
 
 volumes:
